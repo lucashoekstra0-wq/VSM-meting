@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>VSM Tijdmeting — Smits Zevenhuizen</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f5f4f0; --surface: #ffffff; --border: #e0ddd6;
+    --text: #1a1a18; --muted: #7a7870;
+    --green: #0f6e56; --green-bg: #e1f5ee;
+    --blue: #185fa5; --blue-bg: #e6f1fb;
+    --amber: #854f0b; --amber-bg: #faeeda;
+    --red: #a32d2d; --red-bg: #fcebeb; --red-border: #f7c1c1;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  body {
+    font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 16px;
+    max-width: 600px; margin: 0 auto;
+  }
+  h1 { font-size: 17px; font-weight: 600; margin-bottom: 2px; }
+  .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .card-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 10px; }
+  select, input[type=text] {
+    width: 100%; padding: 12px 14px;
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--bg); color: var(--text);
+    font-size: 16px; font-family: inherit;
+    appearance: none; -webkit-appearance: none; outline: none; margin-bottom: 8px;
+  }
+  select:focus, input[type=text]:focus { border-color: #888; }
+  .select-wrap { position: relative; }
+  .select-wrap::after { content: '▾'; position: absolute; right: 14px; top: 50%; transform: translateY(-65%); color: var(--muted); pointer-events: none; font-size: 14px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .row2 input { margin-bottom: 0; }
+  .timer-block { text-align: center; padding: 8px 0 16px; }
+  .timer-num { font-size: 64px; font-weight: 300; letter-spacing: 2px; color: var(--text); line-height: 1; transition: color 0.2s; font-variant-numeric: tabular-nums; }
+  .timer-num.running { color: var(--green); }
+  .timer-status { font-size: 12px; color: var(--muted); margin-top: 6px; height: 16px; }
+  .btn-start {
+    width: 100%; padding: 16px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); background: var(--bg);
+    color: var(--text); font-size: 16px; font-weight: 500; font-family: inherit;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    gap: 8px; margin-bottom: 10px; transition: background 0.15s;
+  }
+  .btn-start:active { background: #eae8e3; }
+  .btn-start.active { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .measure-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .btn-measure {
+    padding: 18px 8px; border-radius: var(--radius-sm); border: 1.5px solid;
+    background: transparent; font-size: 13px; font-weight: 600; font-family: inherit;
+    cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    transition: transform 0.1s;
+  }
+  .btn-measure:active { transform: scale(0.95); }
+  .btn-measure .icon { font-size: 22px; }
+  .btn-cy { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+  .btn-wt { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+  .btn-om { border-color: var(--amber); color: var(--amber); background: var(--amber-bg); }
+  .btn-reset { width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 14px; font-family: inherit; cursor: pointer; }
+  .btn-reset:active { background: var(--bg); }
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .stat-pill { border-radius: var(--radius-sm); padding: 10px 8px; text-align: center; }
+  .stat-pill .n { font-size: 24px; font-weight: 600; display: block; }
+  .stat-pill .lbl { font-size: 10px; font-weight: 500; display: block; margin-top: 2px; }
+  .pill-cy { background: var(--green-bg); color: var(--green); }
+  .pill-wt { background: var(--blue-bg); color: var(--blue); }
+  .pill-om { background: var(--amber-bg); color: var(--amber); }
+  .save-indicator { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 8px; }
+  .save-indicator span { color: var(--green); font-weight: 500; }
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 380px; }
+  th { text-align: left; padding: 8px 8px 6px; font-size: 11px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 9px 8px; border-bottom: 1px solid var(--bg); color: var(--text); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 3px 7px; border-radius: 5px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .b-cy { background: var(--green-bg); color: var(--green); }
+  .b-wt { background: var(--blue-bg); color: var(--blue); }
+  .b-om { background: var(--amber-bg); color: var(--amber); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .btn-export, .btn-clear {
+    padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 14px; font-weight: 500;
+    font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-export:active { background: #eae8e3; }
+  .btn-clear { color: var(--red); border-color: var(--red-border); background: var(--red-bg); }
+  .btn-clear:active { background: #f7c1c1; }
+  .flash {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: #fff; padding: 10px 20px; border-radius: 20px;
+    font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s; z-index: 999; white-space: nowrap;
+  }
+  .flash.show { opacity: 1; }
+  .empty-row td { text-align: center; color: var(--muted); padding: 20px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>VSM Tijdmeting</h1>
+<p class="subtitle">Smits Zevenhuizen — kaasverwerking</p>
+
+<div class="card">
+  <div class="card-label">Werkplek &amp; product</div>
+  <div class="select-wrap">
+    <select id="afdeling">
+      <option value="">— Kies afdeling —</option>
+      <option>Opbakken</option>
+      <option>Spuiten</option>
+      <option>Koel kanaal</option>
+      <option>Buffer / inpakken</option>
+      <option>Vacumeren</option>
+      <option>Metaaldetectie</option>
+      <option>Krimp tunnel</option>
+      <option>Droog tunnel</option>
+      <option>Inpakken (eind)</option>
+    </select>
+  </div>
+  <div class="row2">
+    <input type="text" id="kaassoort" placeholder="Kaassoort" autocomplete="off" autocorrect="off" />
+    <input type="text" id="medewerker" placeholder="Medewerker" autocomplete="off" autocorrect="off" />
+  </div>
+</div>
+
+<div class="card">
+  <div class="timer-block">
+    <div class="timer-num" id="disp">00:00.0</div>
+    <div class="timer-status" id="status">Druk op Start om te beginnen</div>
+  </div>
+  <button class="btn-start" id="startBtn" onclick="toggleTimer()">
+    <span id="startIcon">▶</span>
+    <span id="startLabel">Start timer</span>
+  </button>
+  <div class="measure-grid">
+    <button class="btn-measure btn-cy" onclick="record('Cyclustijd')">
+      <span class="icon">✓</span>Cyclustijd
+    </button>
+    <button class="btn-measure btn-wt" onclick="record('Wachttijd')">
+      <span class="icon">⏱</span>Wachttijd
+    </button>
+    <button class="btn-measure btn-om" onclick="record('Omsteltijd')">
+      <span class="icon">⚙</span>Omsteltijd
+    </button>
+  </div>
+  <button class="btn-reset" onclick="resetTimer()">↺ Reset timer</button>
+</div>
+
+<div class="card">
+  <div class="card-label">Metingen</div>
+  <div class="stats-row">
+    <div class="stat-pill pill-cy"><span class="n" id="cCy">0</span><span class="lbl">Cyclustijd</span></div>
+    <div class="stat-pill pill-wt"><span class="n" id="cWt">0</span><span class="lbl">Wachttijd</span></div>
+    <div class="stat-pill pill-om"><span class="n" id="cOm">0</span><span class="lbl">Omsteltijd</span></div>
+  </div>
+  <div class="save-indicator" id="saveIndicator">— nog geen metingen opgeslagen —</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Tijd</th><th>Afdeling</th><th>Type</th><th>Duur</th><th>Kaas</th><th>Med.</th></tr>
+      </thead>
+      <tbody id="tbl">
+        <tr class="empty-row"><td colspan="6">Nog geen metingen</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="btn-row">
+    <button class="btn-export" onclick="exportCSV()">⬇ Exporteer CSV</button>
+    <button class="btn-clear" onclick="clearData()">✕ Wis alles</button>
+  </div>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script>
+const STORAGE_KEY = 'vsm_metingen_v1';
+let running = false, startMs = 0, elapsed = 0, raf = null, rows = [];
+
+function pad(n) { return String(Math.floor(n)).padStart(2, '0'); }
+function fmtMs(ms) {
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  const t = Math.floor((ms % 1000) / 100);
+  return pad(m) + ':' + pad(s) + '.' + t;
+}
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+    const d = new Date();
+    const t = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    document.getElementById('saveIndicator').innerHTML =
+      'Automatisch opgeslagen om <span>' + t + '</span> &mdash; ' + rows.length + ' meting' + (rows.length !== 1 ? 'en' : '');
+  } catch(e) {
+    document.getElementById('saveIndicator').textContent = '⚠ Opslaan mislukt';
+  }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      rows = JSON.parse(raw);
+      renderTable();
+      updateCounts();
+      if (rows.length > 0) {
+        document.getElementById('saveIndicator').innerHTML =
+          '<span>' + rows.length + ' meting' + (rows.length !== 1 ? 'en' : '') + '</span> geladen uit vorige sessie';
+      }
+    }
+  } catch(e) { rows = []; }
+}
+
+function tick() {
+  if (!running) return;
+  elapsed = Date.now() - startMs;
+  document.getElementById('disp').textContent = fmtMs(elapsed);
+  raf = requestAnimationFrame(tick);
+}
+
+function toggleTimer() {
+  if (!running) {
+    running = true;
+    startMs = Date.now() - elapsed;
+    document.getElementById('startLabel').textContent = 'Timer loopt\u2026';
+    document.getElementById('startIcon').textContent = '\u23F8';
+    document.getElementById('startBtn').classList.add('active');
+    document.getElementById('disp').classList.add('running');
+    document.getElementById('status').textContent = 'Kies het type meting na afloop';
+    raf = requestAnimationFrame(tick);
+  } else {
+    running = false;
+    cancelAnimationFrame(raf);
+    document.getElementById('startLabel').textContent = 'Hervat timer';
+    document.getElementById('startIcon').textContent = '\u25B6';
+    document.getElementById('startBtn').classList.remove('active');
+    document.getElementById('disp').classList.remove('running');
+    document.getElementById('status').textContent = 'Gepauzeerd \u2014 druk op een meetknop of hervat';
+  }
+}
+
+function resetTimer() {
+  running = false;
+  cancelAnimationFrame(raf);
+  elapsed = 0;
+  document.getElementById('disp').textContent = '00:00.0';
+  document.getElementById('disp').classList.remove('running');
+  document.getElementById('startLabel').textContent = 'Start timer';
+  document.getElementById('startIcon').textContent = '\u25B6';
+  document.getElementById('startBtn').classList.remove('active');
+  document.getElementById('status').textContent = 'Druk op Start om te beginnen';
+}
+
+function showFlash(msg) {
+  const f = document.getElementById('flash');
+  f.textContent = msg;
+  f.classList.add('show');
+  setTimeout(() => f.classList.remove('show'), 1800);
+}
+
+function record(type) {
+  const afd = document.getElementById('afdeling').value;
+  if (!afd) { showFlash('\u26A0 Kies eerst een afdeling'); return; }
+  if (elapsed === 0) { showFlash('\u26A0 Start eerst de timer'); return; }
+  const duur = elapsed;
+  const kaas = document.getElementById('kaassoort').value.trim() || '\u2014';
+  const med = document.getElementById('medewerker').value.trim() || '\u2014';
+  const now = new Date();
+  const tijdStr = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+  const datum = now.toISOString().slice(0, 10);
+  rows.unshift({ datum, tijd: tijdStr, afdeling: afd, type, duurMs: duur, kaas, medewerker: med });
+  resetTimer();
+  renderTable();
+  updateCounts();
+  saveToStorage();
+  showFlash('\u2713 ' + type + ' opgeslagen \u2014 ' + fmtMs(duur));
+}
+
+function badgeCls(t) { return t === 'Cyclustijd' ? 'b-cy' : t === 'Wachttijd' ? 'b-wt' : 'b-om'; }
+
+function renderTable() {
+  const tb = document.getElementById('tbl');
+  if (rows.length === 0) {
+    tb.innerHTML = '<tr class="empty-row"><td colspan="6">Nog geen metingen</td></tr>';
+    return;
+  }
+  tb.innerHTML = rows.slice(0, 30).map(r =>
+    '<tr><td>' + r.tijd + '</td><td>' + r.afdeling + '</td>' +
+    '<td><span class="badge ' + badgeCls(r.type) + '">' + r.type + '</span></td>' +
+    '<td style="font-variant-numeric:tabular-nums">' + fmtMs(r.duurMs) + '</td>' +
+    '<td>' + r.kaas + '</td><td>' + r.medewerker + '</td></tr>'
+  ).join('');
+}
+
+function updateCounts() {
+  document.getElementById('cCy').textContent = rows.filter(r => r.type === 'Cyclustijd').length;
+  document.getElementById('cWt').textContent = rows.filter(r => r.type === 'Wachttijd').length;
+  document.getElementById('cOm').textContent = rows.filter(r => r.type === 'Omsteltijd').length;
+}
+
+function exportCSV() {
+  if (rows.length === 0) { showFlash('\u26A0 Nog geen metingen'); return; }
+  const header = 'Datum,Tijd,Afdeling,Type,Duur_sec,Kaassoort,Medewerker\n';
+  const body = [...rows].reverse().map(r =>
+    [r.datum, r.tijd, '"' + r.afdeling + '"', r.type,
+     (r.duurMs / 1000).toFixed(1), '"' + r.kaas + '"', '"' + r.medewerker + '"'].join(',')
+  ).join('\n');
+  const blob = new Blob(['\uFEFF' + header + body], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'vsm_metingen_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showFlash('\u2713 CSV gedownload');
+}
+
+function clearData() {
+  if (rows.length === 0) { showFlash('Geen metingen om te wissen'); return; }
+  if (!confirm('Weet je zeker dat je alle ' + rows.length + ' metingen wilt verwijderen?\nDit kan niet ongedaan worden gemaakt.')) return;
+  rows = [];
+  localStorage.removeItem(STORAGE_KEY);
+  renderTable();
+  updateCounts();
+  document.getElementById('saveIndicator').textContent = '\u2014 nog geen metingen opgeslagen \u2014';
+  showFlash('\u2713 Alle metingen gewist');
+}
+
+loadFromStorage();
+</script>
+</body>
+</html>
